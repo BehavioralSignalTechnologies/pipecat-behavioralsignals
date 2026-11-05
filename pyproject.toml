@@ -1,0 +1,43 @@
+[project]
+name = "pipecat-behavioralsignals"
+version = "0.1.0"
+description = "Behavioral Signals voice readings for Pipecat agents, as RCS perception"
+readme = "README.md"
+authors = [{ name = "Behavioral Signal Technologies" }]
+requires-python = ">=3.12"
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
+keywords = ["pipecat", "voice", "emotion-recognition", "speech", "behavioral-signals"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+    "behavioralsignals>=0.8.0",
+    "pipecat-ai>=1.15.0,<1.16",
+]
+
+[project.urls]
+Homepage = "https://behavioralsignals.com/"
+Documentation = "https://behavioralsignals.readme.io/"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=1",
+    "ruff==0.16.8",
+    # For the example and its test.
+    "pipecat-ai[deepgram,openai,runner,silero,webrtc]>=1.15.0",
+    "python-dotenv>=1",
+]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.10"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
