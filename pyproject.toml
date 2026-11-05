@@ -10,10 +10,14 @@ license-files = ["LICENSE"]
 keywords = ["pipecat", "voice", "emotion-recognition", "speech", "behavioral-signals"]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Multimedia :: Sound/Audio :: Speech",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Typing :: Typed",
 ]
 dependencies = [
     "behavioralsignals>=0.8.0",
@@ -23,6 +27,9 @@ dependencies = [
 [project.urls]
 Homepage = "https://behavioralsignals.com/"
 Documentation = "https://behavioralsignals.readme.io/"
+Repository = "https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals"
+Issues = "https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/issues"
+Changelog = "https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

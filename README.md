@@ -1,5 +1,24 @@
 # pipecat-behavioralsignals
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/BehavioralSignalTechnologies/behavioralsignals-python/main/assets/logo.png" alt="Behavioral Signal Technologies"/>
+</p>
+
+<div align="center">
+
+[![Discord](https://badgen.net/discord/members/fxjRrbMH3Q/?color=8978cc&icon=discord)](https://discord.com/invite/fxjRrbMH3Q)
+[![readme.io](https://badgen.net/badge/readme.io/Documentation/?color=black)](https://behavioralsignals.readme.io/)
+[![CI](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/actions/workflows/ci.yml/badge.svg)](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/actions/workflows/ci.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![PyPI](https://badgen.net/pypi/v/pipecat-behavioralsignals)](https://pypi.org/project/pipecat-behavioralsignals/)
+[![Python](https://badgen.net/pypi/python/pipecat-behavioralsignals)](https://pypi.org/project/pipecat-behavioralsignals/)
+[![Pipecat](https://badgen.net/badge/Pipecat/1.15/blue)](https://github.com/pipecat-ai/pipecat)
+[![License](https://badgen.net/badge/license/BSD-2-Clause/blue)](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/LICENSE)
+[![Contributor Covenant](https://badgen.net/badge/Contributor%20Covenant/2.1/4baaaa)](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/CODE_OF_CONDUCT.md)
+
+</div>
+
 Lets a [Pipecat](https://github.com/pipecat-ai/pipecat) voice agent hear how the user speaks, not
 just what they say. It streams the user's voice to the
 [Behavioral Signals](https://behavioralsignals.com/) API and adds what it reads, such as emotion,
@@ -16,9 +35,18 @@ Maintained by Behavioral Signal Technologies, the company behind the Behavioral 
 uv add pipecat-behavioralsignals
 ```
 
+Or with pip:
+
+```bash
+pip install pipecat-behavioralsignals
+```
+
+Requires Python 3.12 or later and Pipecat 1.15.
+
 ## Prerequisites
 
-A Behavioral Signals account. Set your client ID and API key:
+A Behavioral Signals account. Create one and an API key in the
+[Behavioral Signals portal](https://portal.behavioralsignals.com/). Set your client ID (CID) and API key:
 
 ```bash
 export BEHAVIORALSIGNALS_CID=...
@@ -115,9 +143,7 @@ fits your privacy terms.
 
 ## Running the example
 
-Links to files in this section and below are relative to the source repository.
-
-[examples/bot.py](examples/bot.py) is a voice agent you talk to in the browser. It uses Deepgram
+[examples/bot.py](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/examples/bot.py) is a voice agent you talk to in the browser. It uses Deepgram
 for speech to text and speech, and OpenAI for the LLM.
 
 ```bash
@@ -141,8 +167,10 @@ uv run ruff check
 uv run ruff format --check
 ```
 
-The tests need no credentials: the Behavioral Signals client is faked.
+The tests need no credentials: the Behavioral Signals client is faked. See
+[CONTRIBUTING.md](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/CONTRIBUTING.md) for more, and
+[SECURITY.md](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/SECURITY.md) to report a security problem.
 
 ## License
 
-BSD 2-Clause. See [LICENSE](LICENSE).
+BSD 2-Clause. See [LICENSE](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/LICENSE).
