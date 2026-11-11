@@ -100,7 +100,7 @@ At start, the service declares its signals in a `PerceptionMetadataFrame`. Pipec
 the LLM how to read them. Then each user message starts with the reading, like this:
 
 ```
-([emotion angry=0.71, neutral=0.20, sad=0.06, happy=0.03],[strength strong=0.64, neutral=0.30, weak=0.06],[positivity negative=0.72, neutral=0.20, positive=0.08],[speaking_rate fast=0.50, normal=0.40, slow=0.10],[hesitation no=0.80, yes=0.20],[engagement engaged=0.55, neutral=0.35, withdrawn=0.10],[intensity value=0.61]) I already told you, I was charged twice.
+([emotion angry=0.71, neutral=0.20, sad=0.06, happy=0.03],[positivity negative=0.72, neutral=0.20, positive=0.08],[strength strong=0.64, neutral=0.30, weak=0.06],[speaking_rate fast=0.50, normal=0.40, slow=0.10],[hesitation no=0.80, yes=0.20],[engagement engaged=0.55, neutral=0.35, withdrawn=0.10],[intensity value=0.61]) I already told you, I was charged twice.
 ```
 
 The signals have the names of the Behavioral Signals tasks:
@@ -133,25 +133,10 @@ The service sends the user's audio to the Behavioral Signals API. The
 stream's results are saved there and can be fetched later. Tell your users, and check that this
 fits your privacy terms.
 
-## Known limits
-
-- The service logs in when the pipeline starts. With wrong or missing credentials it reports one
-  error and turns itself off for the call. The pipeline keeps running, with no readings.
-- If the stream keeps failing later, for example with no credits left or no network, the service
-  reports one error upstream and keeps retrying, in case the cause passes. Turns get no readings
-  meanwhile.
-- If the network drops without closing the connection, the stream can hang for minutes before it
-  fails and a new one opens. Turns get no readings meanwhile.
-- If the API stops reading audio, the service keeps up to about 20 seconds of it. Beyond that it
-  drops the audio and starts a new stream.
-- When the pipeline ends, the service closes its stream. But it cannot stop a call to the API that
-  hangs: the SDK has no way to cancel it. Then the stream's thread lives on until the call returns.
-  It is a daemon thread, so it does not keep the process from exiting.
-
 ## Running the example
 
 [examples/bot.py](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/examples/bot.py) is a voice agent you talk to in the browser. It uses Deepgram
-for speech to text and speech, and OpenAI for the LLM.
+for speech to text and text to speech, and OpenAI for the LLM.
 
 ```bash
 git clone https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals.git
