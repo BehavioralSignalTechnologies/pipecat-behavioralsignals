@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2026, Behavioral Signal Technologies
+# Copyright (c) 2026, Behavioral Signal Technologies, Inc.
 #
 # SPDX-License-Identifier: BSD 2-Clause License
 #
@@ -8,7 +8,7 @@
 
 import asyncio
 
-from behavioralsignals import Client
+from behavioralsignals import Behavioral
 from pipecat.frames.frames import (
     Frame,
     EndFrame,
@@ -73,7 +73,7 @@ class BehavioralSignalsPerceptionService(AIService):
         super().__init__(settings=ServiceSettings(model=None), **kwargs)
         self._cid = cid
         self._api_key = api_key
-        self._client: Client | None = None
+        self._client: Behavioral | None = None
         self._stream: BehavioralSignalsStream | None = None
         self._seconds = 0.0  # the user's audio so far
         self._span_start = 0.0  # where the next transcription's audio starts
@@ -88,7 +88,7 @@ class BehavioralSignalsPerceptionService(AIService):
         """
         await super().setup(setup)
         try:
-            self._client = await asyncio.to_thread(Client, self._cid, self._api_key)
+            self._client = await asyncio.to_thread(Behavioral, self._cid, self._api_key)
         except Exception as e:  # noqa: BLE001 - any login failure makes it unusable
             await self.push_error(
                 f"{self}: couldn't log in to Behavioral Signals: {e}",

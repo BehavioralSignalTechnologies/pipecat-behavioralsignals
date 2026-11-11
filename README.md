@@ -55,6 +55,9 @@ export BEHAVIORALSIGNALS_API_KEY=...
 
 You can also pass them to the service as `cid` and `api_key`.
 
+The service streams all of the user's input audio for the whole call, silence included, and
+streaming is billed by the minute. See the portal for prices.
+
 ## Usage
 
 Put `BehavioralSignalsPerceptionService` right after your STT service, and turn on expressive
@@ -118,7 +121,7 @@ The API's speaker signals (age and gender) are not sent.
 ## How it works
 
 Behavioral Signals reads the voice in short windows of about 2 seconds, and each reading arrives
-about 1 to 2 seconds after its audio. On each final transcription, the service takes the latest
+about 1 to 2.5 seconds after its audio. On each final transcription, the service takes the latest
 reading of each signal that overlaps the transcription's audio: the audio since the previous
 final transcription. So a reading usually covers the start or middle of a turn rather than its
 last words, and a very short turn may have no reading. Then the message has no reading at the start.
@@ -132,9 +135,13 @@ fits your privacy terms.
 
 ## Known limits
 
-- If the stream keeps failing, for example with wrong credentials or no credits left, the service
+- The service logs in when the pipeline starts. With wrong or missing credentials it reports one
+  error and turns itself off for the call. The pipeline keeps running, with no readings.
+- If the stream keeps failing later, for example with no credits left or no network, the service
   reports one error upstream and keeps retrying, in case the cause passes. Turns get no readings
   meanwhile.
+- If the network drops without closing the connection, the stream can hang for minutes before it
+  fails and a new one opens. Turns get no readings meanwhile.
 - If the API stops reading audio, the service keeps up to about 20 seconds of it. Beyond that it
   drops the audio and starts a new stream.
 - When the pipeline ends, the service closes its stream. But it cannot stop a call to the API that
@@ -147,16 +154,19 @@ fits your privacy terms.
 for speech to text and speech, and OpenAI for the LLM.
 
 ```bash
+git clone https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals.git
+cd pipecat-behavioralsignals
 uv sync
 cp examples/env.example .env   # then fill in the keys
 uv run examples/bot.py
 ```
 
-Open http://localhost:7860/client and talk. The bot logs each reading it gets, as `Voice: ...`.
+Open http://localhost:7860/client and talk. The bot logs each turn's reading, as `Voice: ...`.
 
 ## Compatibility
 
-Tested with Pipecat v1.15.0. RCS is an alpha in Pipecat, so its types may change between releases.
+Tested with Pipecat v1.15.0 and behavioralsignals 1.0.0. RCS is an alpha in Pipecat, so its types
+may change between releases.
 
 ## Development
 

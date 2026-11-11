@@ -29,7 +29,7 @@ def test_a_stalled_stream_drops_its_audio_and_restarts(monkeypatch):
             pass
         yield from ()
 
-    client = SimpleNamespace(behavioral=SimpleNamespace(stream_audio=stream_audio))
+    client = SimpleNamespace(stream_audio=stream_audio)
     s = BehavioralSignalsStream(client, on_failing=lambda message: None)
     s.send(CHUNK, 16000, 0.0)
     wait_until(lambda: calls)
@@ -44,3 +44,21 @@ def test_a_stalled_stream_drops_its_audio_and_restarts(monkeypatch):
 
     assert queued <= 10
     assert len(calls) == 2
+
+
+def test_a_stream_that_fails_to_open_is_retried_and_reported(monkeypatch):
+    monkeypatch.setattr(stream, "FIRST_RETRY_S", 0.01)
+    monkeypatch.setattr(stream, "MAX_RETRY_S", 0.01)
+    reports = []
+
+    def stream_audio(audio, options):
+        raise ConnectionError("network down")  # before any audio is read
+
+    s = BehavioralSignalsStream(SimpleNamespace(stream_audio=stream_audio), reports.append)
+    deadline = time.monotonic() + 2
+    while not reports and time.monotonic() < deadline:
+        s.send(CHUNK, 16000, 0.0)  # each failed stream needs new audio to retry
+        time.sleep(0.01)
+    s.close()
+
+    assert len(reports) == 1

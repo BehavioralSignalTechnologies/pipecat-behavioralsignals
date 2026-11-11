@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2026, Behavioral Signal Technologies
+# Copyright (c) 2026, Behavioral Signal Technologies, Inc.
 #
 # SPDX-License-Identifier: BSD 2-Clause License
 #
@@ -63,20 +63,40 @@ _TASKS = {term.name for term in CAPABILITIES.signals}
 
 @dataclass(frozen=True)
 class Reading:
-    """One signal read over a span of the user's audio, in seconds from the first audio."""
+    """One signal read over a span of the user's audio, in seconds from the first audio.
+
+    Parameters:
+        start: Where the span starts.
+        end: Where the span ends.
+        signal: The signal read over the span.
+    """
 
     start: float
     end: float
     signal: PerceptionSignal
 
     def overlaps(self, start: float, end: float) -> bool:
+        """Whether this reading's span overlaps the span from `start` to `end`.
+
+        Args:
+            start: Where the other span starts.
+            end: Where the other span ends.
+
+        Returns:
+            True if the spans share some audio.
+        """
         return self.start < end and self.end > start
 
 
 def reading_of(item: ResultItem, offset: float) -> Reading | None:
     """The reading of a result, moved by `offset` seconds.
 
-    None for a task that is not sent, or a result with a value missing.
+    Args:
+        item: A result of the stream.
+        offset: Where the stream's audio starts, in seconds from the first audio.
+
+    Returns:
+        The reading, or None for a task that is not sent, or a result with a value missing.
     """
     if item.task not in _TASKS or item.st is None or item.et is None or not _complete(item):
         return None

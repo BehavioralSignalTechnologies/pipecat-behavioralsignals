@@ -1,3 +1,4 @@
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -11,6 +12,7 @@ from pipecat.frames.frames import (
 )
 from behavioralsignals.models import ResultItem, ModelPredictions, StreamingResultResponse
 from pipecat.expressive.perception import PerceptionSignal
+from pipecat.processors.frame_processor import FrameDirection
 
 from pipecat_behavioralsignals import stream, perception
 from pipecat_behavioralsignals.signals import CAPABILITIES
@@ -64,9 +66,7 @@ def fake_client(results: list[ResultItem]):
         for _ in audio:
             pass
 
-    return SimpleNamespace(
-        behavioral=SimpleNamespace(stream_audio=stream_audio), close=lambda: None
-    )
+    return SimpleNamespace(stream_audio=stream_audio, close=lambda: None)
 
 
 def failing_client(stream_audio):
@@ -76,11 +76,11 @@ def failing_client(stream_audio):
         next(audio)
         yield from stream_audio()
 
-    return SimpleNamespace(behavioral=SimpleNamespace(stream_audio=streams), close=lambda: None)
+    return SimpleNamespace(stream_audio=streams, close=lambda: None)
 
 
 def use_client(monkeypatch, client) -> None:
-    monkeypatch.setattr(perception, "Client", lambda cid, api_key: client)
+    monkeypatch.setattr(perception, "Behavioral", lambda cid, api_key: client)
 
 
 def audio(channels: int = 1) -> InputAudioRawFrame:
@@ -198,12 +198,12 @@ async def test_audio_that_is_not_mono_is_reported_and_not_read(monkeypatch):
 async def test_an_eager_transcription_does_not_end_the_span(monkeypatch):
     use_client(monkeypatch, fake_client([ANGRY]))
     eager = EagerTranscriptionFrame(text="first", user_id="user", timestamp="")
-    frames = [audio(), WAIT, eager, audio(), transcription("first second")]
+    frames = [audio(), WAIT, eager, WAIT, audio(), WAIT, transcription("first second")]
 
     down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
 
     assert of_type(down, EagerTranscriptionFrame)[0].perception
-    assert of_type(down, TranscriptionFrame)[0].perception
+    assert of_type(down, TranscriptionFrame)[0].perception  # its audio is 0-2 s
 
 
 async def test_the_signals_are_declared_once_at_start(monkeypatch):
@@ -221,7 +221,7 @@ async def test_a_failed_login_is_reported_and_frames_pass_unread(monkeypatch):
     def failing_client(cid, api_key):
         raise ValueError("Missing cid")
 
-    monkeypatch.setattr(perception, "Client", failing_client)
+    monkeypatch.setattr(perception, "Behavioral", failing_client)
     frames = [audio(), transcription("first")]
 
     down, up = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
@@ -229,3 +229,65 @@ async def test_a_failed_login_is_reported_and_frames_pass_unread(monkeypatch):
     assert not of_type(down, PerceptionMetadataFrame)
     assert of_type(down, TranscriptionFrame)[0].perception is None
     assert "Missing cid" in of_type(up, ErrorFrame)[0].error
+
+
+async def test_readings_of_a_new_stream_are_timed_from_its_first_audio(monkeypatch):
+    monkeypatch.setattr(stream, "FIRST_RETRY_S", 0.01)
+    calls = []
+
+    def stream_audio(audio, options):
+        next(audio)
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("UNAVAILABLE")
+        yield StreamingResultResponse(result=[ANGRY])  # 0.2-0.8 s into this stream
+        for _ in audio:
+            pass
+
+    use_client(monkeypatch, SimpleNamespace(stream_audio=stream_audio, close=lambda: None))
+    frames = [audio(), WAIT, transcription("first"), WAIT, audio(), WAIT, transcription("second")]
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    first, second = of_type(down, TranscriptionFrame)
+    assert first.perception is None
+    assert second.perception  # the new stream started at 1 s, so its reading is 1.2-1.8 s
+
+
+async def test_every_frame_is_passed_on(monkeypatch):
+    use_client(monkeypatch, fake_client([ANGRY]))
+    frames = [audio(), WAIT, transcription("first")]
+
+    await run_test(
+        BehavioralSignalsPerceptionService(),
+        frames_to_send=frames,
+        expected_down_frames=[PerceptionMetadataFrame, InputAudioRawFrame, TranscriptionFrame],
+    )
+    await run_test(
+        BehavioralSignalsPerceptionService(),
+        frames_to_send=[transcription("first")],
+        frames_to_send_direction=FrameDirection.UPSTREAM,
+        expected_up_frames=[PerceptionMetadataFrame, TranscriptionFrame],
+    )
+
+
+async def test_the_stream_and_the_client_are_closed_at_the_end(monkeypatch):
+    closed = []
+    stream_ended = threading.Event()
+
+    def stream_audio(audio, options):
+        for _ in audio:
+            pass
+        closed.append("stream")
+        stream_ended.set()
+        yield from ()
+
+    use_client(
+        monkeypatch,
+        SimpleNamespace(stream_audio=stream_audio, close=lambda: closed.append("client")),
+    )
+
+    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=[audio(), WAIT])
+    stream_ended.wait(2)  # the stream ends in its own thread
+
+    assert sorted(closed) == ["client", "stream"]

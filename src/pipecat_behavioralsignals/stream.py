@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2026, Behavioral Signal Technologies
+# Copyright (c) 2026, Behavioral Signal Technologies, Inc.
 #
 # SPDX-License-Identifier: BSD 2-Clause License
 #
@@ -11,7 +11,7 @@ import threading
 from collections.abc import Callable, Iterator
 
 from loguru import logger
-from behavioralsignals import Client
+from behavioralsignals import Behavioral
 from behavioralsignals.models import StreamingOptions
 
 from pipecat_behavioralsignals.signals import Reading, reading_of
@@ -54,7 +54,7 @@ class BehavioralSignalsStream:
     audio sent after it failed. When streams keep failing, it calls `on_failing` once.
     """
 
-    def __init__(self, client: Client, on_failing: Callable[[str], None]):
+    def __init__(self, client: Behavioral, on_failing: Callable[[str], None]):
         """Start the thread that runs the stream.
 
         Args:
@@ -69,7 +69,13 @@ class BehavioralSignalsStream:
         threading.Thread(target=self._run, daemon=True).start()
 
     def send(self, audio: bytes, sample_rate: int, at: float) -> None:
-        """Send 16-bit mono audio that starts `at` seconds from the first audio."""
+        """Send 16-bit mono audio.
+
+        Args:
+            audio: The audio bytes.
+            sample_rate: The audio's sample rate.
+            at: Where the audio starts, in seconds from the first audio.
+        """
         if self._closed.is_set():
             return
         try:
@@ -81,20 +87,25 @@ class BehavioralSignalsStream:
             _end(self._chunks)
 
     def drain(self) -> list[Reading]:
-        """The readings that arrived since the last call."""
+        """Take the readings that arrived since the last call.
+
+        Returns:
+            The readings, oldest first.
+        """
         readings = []
         while not self._readings.empty():
             readings.append(self._readings.get_nowait())
         return readings
 
     def close(self) -> None:
+        """Stop streaming: end the audio, and open no new stream."""
         self._closed.set()
         _end(self._chunks)
 
     def _run(self) -> None:
         retry, failures = FIRST_RETRY_S, 0
         while not self._closed.is_set():
-            answered = self._stream()
+            answered = self._stream_or_fail()
             if self._closed.is_set():
                 return
             retry = FIRST_RETRY_S if answered else min(retry * 2, MAX_RETRY_S)
@@ -106,6 +117,14 @@ class BehavioralSignalsStream:
             logger.warning(f"Behavioral Signals stream ended, opening a new one in {retry:.1f}s")
             self._closed.wait(retry)
 
+    def _stream_or_fail(self) -> bool:
+        """Run one stream; a failure to open it counts as a stream with no results."""
+        try:
+            return self._stream()
+        except Exception as error:  # noqa: BLE001 - reconnects on any failure
+            logger.warning(f"Behavioral Signals stream failed: {error!r}")
+            return False
+
     def _stream(self) -> bool:
         """Run one stream from a new queue, so audio sent while it was down is dropped.
 
@@ -116,7 +135,7 @@ class BehavioralSignalsStream:
         if self._closed.is_set() or (first := chunks.get()) is None:
             return False
         options = StreamingOptions(sample_rate=first[1], encoding="LINEAR_PCM")
-        responses = self._client.behavioral.stream_audio(_audio(first, chunks), options)
+        responses = self._client.stream_audio(_audio(first, chunks), options)
         answered = False
         while (results := _next_results(responses)) is not None:
             answered = answered or bool(results)

@@ -20,7 +20,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-    "behavioralsignals>=0.8.0",
+    "behavioralsignals>=1.0.0,<2",
     "pipecat-ai>=1.15.0,<1.16",
 ]
 

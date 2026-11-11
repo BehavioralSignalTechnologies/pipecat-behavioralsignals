@@ -60,4 +60,5 @@ package and installs the built wheel with the newest versions allowed, to check 
 ## Releases
 
 Maintainers release from `main`. Publish a GitHub release with a tag like `v0.1.0` that matches
-`version` in `pyproject.toml`. The Release workflow then builds the package and uploads it to PyPI.
+`version` in `pyproject.toml`. The Release workflow then checks that they match, runs the tests,
+builds the package and uploads it to PyPI.
