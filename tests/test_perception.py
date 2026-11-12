@@ -200,6 +200,19 @@ async def test_signals_declared_before_are_declared_again_with_ours(monkeypatch)
     assert declared_before not in declared
 
 
+async def test_a_declaration_going_upstream_passes_on_unchanged(monkeypatch):
+    use_client(monkeypatch, fake_client([]))
+    declared_after = PerceptionMetadataFrame(service_name="tone", perception=TONE)
+
+    _, up = await run_test(
+        BehavioralSignalsPerceptionService(),
+        frames_to_send=[declared_after],
+        frames_to_send_direction=FrameDirection.UPSTREAM,
+    )
+
+    assert [frame.perception for frame in of_type(up, PerceptionMetadataFrame)][-1] == TONE
+
+
 async def test_signals_declared_before_pass_on_when_login_failed(monkeypatch):
     def failing_client(cid, api_key):
         raise ValueError("Missing cid")
@@ -254,6 +267,16 @@ async def test_an_eager_transcription_does_not_end_the_span(monkeypatch):
 
     assert of_type(down, EagerTranscriptionFrame)[0].perception
     assert of_type(down, TranscriptionFrame)[0].perception  # its audio is 0-2 s
+
+
+async def test_an_empty_eager_transcription_is_not_read(monkeypatch):
+    use_client(monkeypatch, fake_client([ANGRY]))
+    eager = EagerTranscriptionFrame(text=" ", user_id="user", timestamp="")
+    frames = [audio(), WAIT, eager]
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert of_type(down, EagerTranscriptionFrame)[0].perception is None
 
 
 async def test_the_signals_are_declared_once_at_start(monkeypatch):

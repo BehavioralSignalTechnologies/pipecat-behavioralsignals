@@ -16,7 +16,9 @@ from pipecat.expressive.perception import (
 )
 
 
-_FROM_VOICE = "Read from the voice, not the words, over the latest part of the turn."
+_FROM_VOICE = (
+    "Read from the voice, not the words, over a recent part of the turn, often not its end."
+)
 
 # Each signal has the name of its Behavioral Signals task, except emotion, which is
 # voice_emotion: Pipecat Tone's emotion is read from the words, and merging would mix them.

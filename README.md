@@ -24,8 +24,9 @@ just what they say. It streams the user's voice to the
 [Behavioral Signals](https://behavioralsignals.com/) API and adds what it reads, such as emotion,
 energy and hesitation, to each user turn. The LLM reads it with the user's words.
 
-It uses Pipecat's Real-Time Context Standard (RCS): it is a perception producer. Pipecat's own
-`PipecatToneReader` reads the words; this reads the voice.
+It uses Pipecat's Real-Time Context Standard (RCS): it is a perception producer. Pipecat ships
+its own too: `PipecatToneReader` reads the words, and `PipecatVoiceReader` reads the voice with a
+Pipecat model. This one reads the voice with the Behavioral Signals API, and can run with them.
 
 Maintained by Behavioral Signal Technologies, the company behind the Behavioral Signals API.
 

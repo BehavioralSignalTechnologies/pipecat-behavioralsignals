@@ -126,7 +126,7 @@ class BehavioralSignalsPerceptionService(AIService):
 
         if isinstance(frame, InputAudioRawFrame):
             await self._send(frame)
-        elif isinstance(frame, EagerTranscriptionFrame):
+        elif isinstance(frame, EagerTranscriptionFrame) and frame.text.strip():
             self._add_reading(frame, self._perceive(self._span_start, self._seconds))
         elif isinstance(frame, TranscriptionFrame) and frame.text.strip():
             self._end_span()
