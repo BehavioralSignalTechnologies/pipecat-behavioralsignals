@@ -13,7 +13,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![PyPI](https://badgen.net/pypi/v/pipecat-behavioralsignals)](https://pypi.org/project/pipecat-behavioralsignals/)
 [![Python](https://badgen.net/pypi/python/pipecat-behavioralsignals)](https://pypi.org/project/pipecat-behavioralsignals/)
-[![Pipecat](https://badgen.net/badge/Pipecat/1.15/blue)](https://github.com/pipecat-ai/pipecat)
+[![Pipecat](https://badgen.net/badge/Pipecat/1.16/blue)](https://github.com/pipecat-ai/pipecat)
 [![License](https://badgen.net/badge/license/BSD-2-Clause/blue)](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/LICENSE)
 [![Contributor Covenant](https://badgen.net/badge/Contributor%20Covenant/2.1/4baaaa)](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/CODE_OF_CONDUCT.md)
 
@@ -41,7 +41,7 @@ Or with pip:
 pip install pipecat-behavioralsignals
 ```
 
-Requires Python 3.12 or later and Pipecat 1.15.
+Requires Python 3.12 or later and Pipecat 1.16.
 
 ## Prerequisites
 
@@ -91,7 +91,8 @@ Things to know:
   `audio_passthrough=False`.
 - It expects 16-bit mono audio, which is what Pipecat transports give by default. On audio with
   more channels it reports an error and stops reading.
-- A pipeline has one perception producer. Use this instead of `PipecatToneReader`, not with it.
+- It adds its reading to the one a transcription already carries, such as from a `PipecatToneReader`
+  placed before it, and declares that producer's signals again with its own.
 - Without `enable_expressive_conversation=True`, the LLM does not see the readings.
 
 ## What the LLM sees
@@ -100,14 +101,15 @@ At start, the service declares its signals in a `PerceptionMetadataFrame`. Pipec
 the LLM how to read them. Then each user message starts with the reading, like this:
 
 ```
-([emotion angry=0.71, neutral=0.20, sad=0.06, happy=0.03],[positivity negative=0.72, neutral=0.20, positive=0.08],[strength strong=0.64, neutral=0.30, weak=0.06],[speaking_rate fast=0.50, normal=0.40, slow=0.10],[hesitation no=0.80, yes=0.20],[engagement engaged=0.55, neutral=0.35, withdrawn=0.10],[intensity value=0.61]) I already told you, I was charged twice.
+([voice_emotion angry=0.71, neutral=0.20, sad=0.06, happy=0.03],[positivity negative=0.72, neutral=0.20, positive=0.08],[strength strong=0.64, neutral=0.30, weak=0.06],[speaking_rate fast=0.50, normal=0.40, slow=0.10],[hesitation no=0.80, yes=0.20],[engagement engaged=0.55, neutral=0.35, withdrawn=0.10],[intensity value=0.61]) I already told you, I was charged twice.
 ```
 
-The signals have the names of the Behavioral Signals tasks:
+The signals have the names of the Behavioral Signals tasks, except `voice_emotion` (the `emotion`
+task), which is kept apart from Pipecat Tone's `emotion`, read from the words:
 
 | Signal | What it reads | Labels |
 |---|---|---|
-| `emotion` | The emotion in the voice | `happy`, `angry`, `sad`, `neutral` |
+| `voice_emotion` | The emotion in the voice | `happy`, `angry`, `sad`, `neutral` |
 | `strength` | Arousal: the energy in the voice | `strong`, `weak`, `neutral` |
 | `positivity` | Valence: how positive the tone of voice is | `positive`, `negative`, `neutral` |
 | `speaking_rate` | How fast the user speaks, compared to speakers in general | `fast`, `slow`, `normal` |
@@ -150,7 +152,7 @@ Open http://localhost:7860/client and talk. The bot logs each turn's reading, as
 
 ## Compatibility
 
-Tested with Pipecat v1.15.0 and behavioralsignals 1.0.0. RCS is an alpha in Pipecat, so its types
+Tested with Pipecat v1.16.0 and behavioralsignals 1.0.0. RCS is an alpha in Pipecat, so its types
 may change between releases.
 
 ## Development

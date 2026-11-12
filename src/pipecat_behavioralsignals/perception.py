@@ -20,7 +20,11 @@ from pipecat.frames.frames import (
 )
 from pipecat.services.settings import ServiceSettings
 from pipecat.services.ai_service import AIService
-from pipecat.expressive.perception import PerceptionSignal
+from pipecat.expressive.perception import (
+    PerceptionSignal,
+    PerceptionCapabilities,
+    merge_perception,
+)
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSetup
 
 from pipecat_behavioralsignals.stream import BehavioralSignalsStream
@@ -32,27 +36,29 @@ class BehavioralSignalsPerceptionService(AIService):
 
     Goes between the STT service and the user aggregator. It streams the user's
     audio, which the STT service passes on, to the Behavioral Signals streaming
-    API. On each final transcription it sets ``perception`` to the latest
+    API. On each final transcription it adds to ``perception`` the latest
     reading of each signal that overlaps the transcription's audio: the audio
     since the previous final transcription, or that of the previous one when
-    no audio came in between. It also sets it on an eager transcription,
+    no audio came in between. It also adds it on an eager transcription,
     without ending the span. Signals with no such reading are left out, and
-    with none at all ``perception`` stays None. Transcriptions with no text
-    pass through unread.
+    with none at all ``perception`` stays as it was. Transcriptions with no
+    text pass through unread. A reading a producer before it set, such as
+    ``PipecatToneReader``, is kept, merged with ``merge_perception``.
 
     It reads mono audio only. On audio with more channels it reports an error
     and stops reading. When the stream keeps failing, it reports an error
     once and keeps retrying.
 
     At start it broadcasts a ``PerceptionMetadataFrame`` that declares its
-    signals. It logs in to Behavioral Signals while the pipeline is set up; if
+    signals. A ``PerceptionMetadataFrame`` from a producer before it is
+    declared again with its signals, since the LLM keeps the last one only.
+    It logs in to Behavioral Signals while the pipeline is set up; if
     that fails, it reports an error that leaves it unusable, and frames pass
     through unread.
 
     Part of expressive conversation (alpha): turn it on with
     ``PipelineParams(enable_expressive_conversation=True)`` for the LLM to read
-    the turns. Use it instead of ``PipecatToneReader``, not with it: a pipeline
-    has one perception producer.
+    the turns.
 
     Example::
 
@@ -79,6 +85,7 @@ class BehavioralSignalsPerceptionService(AIService):
         self._span_start = 0.0  # where the next transcription's audio starts
         self._span = (0.0, 0.0)  # the audio of the last final transcription
         self._latest: dict[str, Reading] = {}  # the latest reading of each signal
+        self._declared_before: PerceptionCapabilities | None = None  # by producers before it
 
     async def setup(self, setup: FrameProcessorSetup):
         """Set up the service and log in to Behavioral Signals.
@@ -106,7 +113,7 @@ class BehavioralSignalsPerceptionService(AIService):
         """
         if not self._stream:
             return None
-        return PerceptionMetadataFrame(service_name=self.name, perception=CAPABILITIES)
+        return PerceptionMetadataFrame(service_name=self.name, perception=self._capabilities())
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         """Stream the user's audio, and set the perception of transcriptions.
@@ -120,10 +127,18 @@ class BehavioralSignalsPerceptionService(AIService):
         if isinstance(frame, InputAudioRawFrame):
             await self._send(frame)
         elif isinstance(frame, EagerTranscriptionFrame):
-            frame.perception = self._perceive(self._span_start, self._seconds)
+            self._add_reading(frame, self._perceive(self._span_start, self._seconds))
         elif isinstance(frame, TranscriptionFrame) and frame.text.strip():
             self._end_span()
-            frame.perception = self._perceive(*self._span)
+            self._add_reading(frame, self._perceive(*self._span))
+        elif (
+            isinstance(frame, PerceptionMetadataFrame)
+            and direction == FrameDirection.DOWNSTREAM
+            and self._stream
+        ):
+            # Declared again with its signals: the LLM keeps the last declaration only.
+            self._declared_before = frame.perception
+            frame = self.service_metadata_frame()
         await self.push_frame(frame, direction)
 
     async def stop(self, frame: EndFrame):
@@ -168,6 +183,21 @@ class BehavioralSignalsPerceptionService(AIService):
         if self._seconds > self._span_start:
             self._span = (self._span_start, self._seconds)
             self._span_start = self._seconds
+
+    def _capabilities(self) -> PerceptionCapabilities:
+        """The signals declared before it, then its own."""
+        if self._declared_before:
+            return self._declared_before.merge(CAPABILITIES)
+        return CAPABILITIES
+
+    def _add_reading(
+        self,
+        frame: TranscriptionFrame | EagerTranscriptionFrame,
+        reading: list[PerceptionSignal] | None,
+    ) -> None:
+        """Add the reading to the one the transcription carries, if any."""
+        if reading:
+            frame.perception = merge_perception(frame.perception, reading)
 
     def _perceive(self, start: float, end: float) -> list[PerceptionSignal] | None:
         if self._stream:

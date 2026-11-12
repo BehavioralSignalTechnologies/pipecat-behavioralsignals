@@ -11,7 +11,7 @@ from pipecat.frames.frames import (
     PerceptionMetadataFrame,
 )
 from behavioralsignals.models import ResultItem, ModelPredictions, StreamingResultResponse
-from pipecat.expressive.perception import PerceptionSignal
+from pipecat.expressive.perception import PerceptionTerm, PerceptionSignal, PerceptionCapabilities
 from pipecat.processors.frame_processor import FrameDirection
 
 from pipecat_behavioralsignals import stream, perception
@@ -106,7 +106,7 @@ async def test_a_reading_goes_to_the_transcription_it_overlaps(monkeypatch):
 
     first, second = of_type(down, TranscriptionFrame)
     assert first.perception == [  # its audio is 0-1 s
-        PerceptionSignal("emotion", labels=[("angry", 0.7), ("neutral", 0.2), ("sad", 0.1)]),
+        PerceptionSignal("voice_emotion", labels=[("angry", 0.7), ("neutral", 0.2), ("sad", 0.1)]),
         PerceptionSignal("intensity", value=0.61),
     ]
     assert second.perception == [  # its audio is 1-2 s
@@ -158,8 +158,58 @@ async def test_results_with_missing_values_are_skipped(monkeypatch):
     down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
 
     assert [signal.name for signal in of_type(down, TranscriptionFrame)[0].perception] == [
-        "emotion"
+        "voice_emotion"
     ]
+
+
+async def test_a_reading_is_added_to_the_one_the_transcription_carries(monkeypatch):
+    use_client(monkeypatch, fake_client([ANGRY]))
+    tone = PerceptionSignal("tone", labels=[("calm", 0.8)])
+    read_before = TranscriptionFrame(text="first", user_id="user", timestamp="", perception=[tone])
+    frames = [audio(), WAIT, read_before]
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert [s.name for s in of_type(down, TranscriptionFrame)[0].perception] == [
+        "tone",
+        "voice_emotion",
+    ]
+
+
+async def test_a_transcription_with_no_reading_keeps_the_one_it_carries(monkeypatch):
+    use_client(monkeypatch, fake_client([]))
+    tone = PerceptionSignal("tone", labels=[("calm", 0.8)])
+    read_before = TranscriptionFrame(text="first", user_id="user", timestamp="", perception=[tone])
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=[read_before])
+
+    assert of_type(down, TranscriptionFrame)[0].perception == [tone]
+
+
+TONE = PerceptionCapabilities([PerceptionTerm("tone", "The tone of the words.", ["calm"])])
+
+
+async def test_signals_declared_before_are_declared_again_with_ours(monkeypatch):
+    use_client(monkeypatch, fake_client([]))
+    declared_before = PerceptionMetadataFrame(service_name="tone", perception=TONE)
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=[declared_before])
+
+    declared = of_type(down, PerceptionMetadataFrame)
+    assert declared[-1].perception == TONE.merge(CAPABILITIES)
+    assert declared_before not in declared
+
+
+async def test_signals_declared_before_pass_on_when_login_failed(monkeypatch):
+    def failing_client(cid, api_key):
+        raise ValueError("Missing cid")
+
+    monkeypatch.setattr(perception, "Behavioral", failing_client)
+    declared_before = PerceptionMetadataFrame(service_name="tone", perception=TONE)
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=[declared_before])
+
+    assert [frame.perception for frame in of_type(down, PerceptionMetadataFrame)] == [TONE]
 
 
 def raises():

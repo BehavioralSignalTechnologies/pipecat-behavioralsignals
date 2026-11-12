@@ -18,11 +18,14 @@ from pipecat.expressive.perception import (
 
 _FROM_VOICE = "Read from the voice, not the words, over the latest part of the turn."
 
-# Each signal has the name of its Behavioral Signals task.
+# Each signal has the name of its Behavioral Signals task, except emotion, which is
+# voice_emotion: Pipecat Tone's emotion is read from the words, and merging would mix them.
+_SIGNAL_NAMES = {"emotion": "voice_emotion"}
+
 CAPABILITIES = PerceptionCapabilities(
     signals=[
         PerceptionTerm(
-            "emotion",
+            "voice_emotion",
             f"The emotion in the voice. {_FROM_VOICE}",
             ["happy", "angry", "sad", "neutral"],
         ),
@@ -58,7 +61,8 @@ CAPABILITIES = PerceptionCapabilities(
     ]
 )
 
-_TASKS = {term.name for term in CAPABILITIES.signals}
+_TASK_NAMES = {signal: task for task, signal in _SIGNAL_NAMES.items()}
+_TASKS = {_TASK_NAMES.get(term.name, term.name) for term in CAPABILITIES.signals}
 
 
 @dataclass(frozen=True)
@@ -116,4 +120,5 @@ def _signal_of(item: ResultItem) -> PerceptionSignal:
     if item.task == "intensity":
         return PerceptionSignal("intensity", value=round(float(item.prediction[0].score), 2))
     labels = [(p.label, float(p.posterior)) for p in item.prediction]
-    return PerceptionSignal(item.task, labels=sorted(labels, key=lambda label: -label[1]))
+    name = _SIGNAL_NAMES.get(item.task, item.task)
+    return PerceptionSignal(name, labels=sorted(labels, key=lambda label: -label[1]))

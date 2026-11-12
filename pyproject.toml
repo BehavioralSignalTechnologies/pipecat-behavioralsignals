@@ -1,6 +1,6 @@
 [project]
 name = "pipecat-behavioralsignals"
-version = "0.1.0"
+version = "0.2.0"
 description = "Behavioral Signals voice readings for Pipecat agents, as RCS perception"
 readme = "README.md"
 authors = [{ name = "Behavioral Signal Technologies" }]
@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "behavioralsignals>=1.0.0,<2",
-    "pipecat-ai>=1.15.0,<1.16",
+    "pipecat-ai>=1.16.0,<1.17",
 ]
 
 [project.urls]
@@ -37,7 +37,7 @@ dev = [
     "pytest-asyncio>=1",
     "ruff==0.16.8",
     # For the example and its test.
-    "pipecat-ai[deepgram,openai,runner,silero,webrtc]>=1.15.0",
+    "pipecat-ai[deepgram,openai,runner,silero,webrtc]>=1.16.0",
     "python-dotenv>=1",
 ]
 
