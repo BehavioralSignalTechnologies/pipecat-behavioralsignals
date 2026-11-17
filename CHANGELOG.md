@@ -6,7 +6,8 @@
   the turn ended, so the API reads the turn's last words at once instead of waiting for silence.
   Final and eager transcriptions don't end the turn.
 - The next turn's audio starts where the previous turn ended, so the reading of a turn's last
-  words is not added to the next turn.
+  words is not added to the next turn. A final transcription that comes after the end of a turn
+  that no other one has read reads that turn, unless the next turn has already started.
 - Requires behavioralsignals 1.2.0 (`>=1.2.0,<2`), the first SDK that sends the end of a turn.
 
 ## 0.2.1 (2026-11-17)

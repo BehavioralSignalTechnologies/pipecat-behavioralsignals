@@ -126,9 +126,11 @@ The API's speaker signals (age and gender) are not sent.
 Behavioral Signals reads the voice in short windows of about 2 seconds, and each reading arrives
 about 1 to 2.5 seconds after its audio. On each final transcription, the service takes the latest
 reading of each signal that overlaps the transcription's audio: the audio since the previous
-final transcription, or since the end of the previous turn when that came later. So a reading
-usually covers the start or middle of a turn rather than its last words, and a very short turn may
-have no reading. Then the message has no reading at the start.
+final transcription, or since the end of the previous turn when that came later. A final
+transcription that comes after the end of a turn that no other one has read takes that turn's
+audio instead, unless the next turn has already started (a `UserStartedSpeakingFrame`). So a
+reading usually covers the start or middle of a turn rather than its last words, and a very short
+turn may have no reading. Then the message has no reading at the start.
 
 When the user aggregator decides that the user's turn is over, it sends a `UserStoppedSpeakingFrame`
 back through the service, and the service tells the API that the turn ended. The API then reads the

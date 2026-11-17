@@ -17,6 +17,7 @@ from pipecat.frames.frames import (
     TranscriptionFrame,
     EagerTranscriptionFrame,
     PerceptionMetadataFrame,
+    UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
 )
 from pipecat.services.settings import ServiceSettings
@@ -46,11 +47,14 @@ class BehavioralSignalsPerceptionService(AIService):
     reading of each signal that overlaps the transcription's audio: the audio
     since the previous final transcription, or since the end of the previous
     turn when that came later, or that of the previous one when no audio came
-    in between. It also adds it on an eager transcription, without ending the
-    span. Signals with no such reading are left out, and with none at all
-    ``perception`` stays as it was. Transcriptions with no text pass through
-    unread. A reading a producer before it set, such as
-    ``PipecatToneReader``, is kept, merged with ``merge_perception``.
+    in between. A final transcription that comes after the end of a turn that
+    no other one has read reads that turn instead, unless a
+    ``UserStartedSpeakingFrame`` has started the next one. It also adds it on
+    an eager transcription, without ending the span. Signals with no such
+    reading are left out, and with none at all ``perception`` stays as it was.
+    Transcriptions with no text pass through unread. A reading a producer
+    before it set, such as ``PipecatToneReader``, is kept, merged with
+    ``merge_perception``.
 
     On each ``UserStoppedSpeakingFrame``, which the user aggregator sends back
     through it when it decides that the user's turn is over, it tells the API
@@ -97,7 +101,8 @@ class BehavioralSignalsPerceptionService(AIService):
         self._seconds = 0.0  # the user's audio so far
         self._span_start = 0.0  # where the next transcription's audio starts
         self._span = (0.0, 0.0)  # the audio of the last final transcription
-        self._turn_start = 0.0  # where the user's current turn starts
+        self._turn_read = False  # whether a final transcription read the current turn's audio
+        self._owed: tuple[float, float] | None = None  # a turn that ended before its final one
         self._latest: dict[str, Reading] = {}  # the latest reading of each signal
         self._declared_before: PerceptionCapabilities | None = None  # by producers before it
 
@@ -145,6 +150,9 @@ class BehavioralSignalsPerceptionService(AIService):
         elif isinstance(frame, TranscriptionFrame) and frame.text.strip():
             self._end_span()
             self._add_reading(frame, self._perceive(*self._span))
+        elif isinstance(frame, UserStartedSpeakingFrame):
+            # The user aggregator counts a later transcription in the new turn, so it reads that.
+            self._owed = None
         elif isinstance(frame, UserStoppedSpeakingFrame):
             self._end_turn()
         elif (
@@ -195,19 +203,29 @@ class BehavioralSignalsPerceptionService(AIService):
         self._seconds += frame.num_frames / frame.sample_rate
 
     def _end_span(self) -> None:
-        """Make the audio since the last final transcription its span, if there is any."""
-        if self._seconds > self._span_start:
+        """Make the final transcription's span the audio it reads.
+
+        That is the audio of the last turn when it ended before a final transcription read it,
+        and otherwise the audio since the last final transcription. With neither, the span stays.
+        """
+        if self._owed:
+            self._span, self._owed = self._owed, None
+        elif self._seconds > self._span_start:
             self._span = (self._span_start, self._seconds)
             self._span_start = self._seconds
+            self._turn_read = True
 
     def _end_turn(self) -> None:
-        """Tell the API that the turn ended, and start the next span at the turn's end."""
+        """Tell the API that the turn ended, and start the next span at the turn's end.
+
+        When no final transcription has read the turn's audio yet, the next one reads it.
+        """
         if self._stream:
             self._stream.end_turn()
-        # Without a final transcription in this turn, its audio waits for a late one.
-        if self._span[1] > self._turn_start:
-            self._turn_start = self._seconds + READING_ROUNDING_S
-            self._span_start = self._turn_start
+        if not self._turn_read and self._seconds > self._span_start:
+            self._owed = (self._span_start, self._seconds)
+        self._turn_read = False
+        self._span_start = self._seconds + READING_ROUNDING_S
 
     def _capabilities(self) -> PerceptionCapabilities:
         """The signals declared before it, then its own."""
