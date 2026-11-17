@@ -298,12 +298,13 @@ async def test_a_failed_login_is_reported_and_frames_pass_unread(monkeypatch):
         raise ValueError("Missing cid")
 
     monkeypatch.setattr(perception, "Behavioral", failing_client)
-    frames = [audio(), transcription("first")]
+    frames = [audio(), transcription("first"), UserStoppedSpeakingFrame()]
 
     down, up = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
 
     assert not of_type(down, PerceptionMetadataFrame)
     assert of_type(down, TranscriptionFrame)[0].perception is None
+    assert of_type(down, UserStoppedSpeakingFrame)
     assert "Missing cid" in of_type(up, ErrorFrame)[0].error
 
 
