@@ -42,8 +42,11 @@ class BehavioralSignalsPerceptionService(AIService):
     no audio came in between. It also adds it on an eager transcription,
     without ending the span. Signals with no such reading are left out, and
     with none at all ``perception`` stays as it was. Transcriptions with no
-    text pass through unread. A reading a producer before it set, such as
-    ``PipecatToneReader``, is kept, merged with ``merge_perception``.
+    text pass through unread. On each final transcription with text, and
+    never on an eager one, it also tells the API that the turn ended, so the
+    API reads the turn's last words at once. A reading a producer before it
+    set, such as ``PipecatToneReader``, is kept, merged with
+    ``merge_perception``.
 
     It reads mono audio only. On audio with more channels it reports an error
     and stops reading. When the stream keeps failing, it reports an error
@@ -129,6 +132,8 @@ class BehavioralSignalsPerceptionService(AIService):
         elif isinstance(frame, EagerTranscriptionFrame) and frame.text.strip():
             self._add_reading(frame, self._perceive(self._span_start, self._seconds))
         elif isinstance(frame, TranscriptionFrame) and frame.text.strip():
+            if self._stream:
+                self._stream.end_turn()
             self._end_span()
             self._add_reading(frame, self._perceive(*self._span))
         elif (

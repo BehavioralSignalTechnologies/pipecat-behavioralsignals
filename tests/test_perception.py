@@ -2,6 +2,7 @@ import threading
 from types import SimpleNamespace
 
 import pytest
+from behavioralsignals import END_OF_TURN
 from pipecat.tests.utils import SleepFrame, run_test
 from pipecat.frames.frames import (
     ErrorFrame,
@@ -364,3 +365,44 @@ async def test_the_stream_and_the_client_are_closed_at_the_end(monkeypatch):
     stream_ended.wait(2)  # the stream ends in its own thread
 
     assert sorted(closed) == ["client", "stream"]
+
+
+def recording_client(items: list):
+    """A client whose stream records every item of its audio, and answers nothing."""
+
+    def stream_audio(audio, options):
+        items.extend(audio)
+        yield from ()
+
+    return SimpleNamespace(stream_audio=stream_audio, close=lambda: None)
+
+
+async def test_a_final_transcription_sends_one_marker_after_its_audio(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    frames = [audio(), WAIT, transcription("first"), WAIT]
+
+    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert items == [ONE_SECOND, END_OF_TURN]
+
+
+async def test_an_eager_transcription_sends_no_marker(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    eager = EagerTranscriptionFrame(text="first", user_id="user", timestamp="")
+    frames = [audio(), WAIT, eager, WAIT]
+
+    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert items == [ONE_SECOND]
+
+
+async def test_an_empty_transcription_sends_no_marker(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    frames = [audio(), WAIT, transcription(" "), WAIT]
+
+    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert items == [ONE_SECOND]

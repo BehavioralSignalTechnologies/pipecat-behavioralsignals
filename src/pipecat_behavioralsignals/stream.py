@@ -11,7 +11,7 @@ import threading
 from collections.abc import Callable, Iterator
 
 from loguru import logger
-from behavioralsignals import Behavioral
+from behavioralsignals import END_OF_TURN, EndOfTurn, Behavioral
 from behavioralsignals.models import StreamingOptions
 
 from pipecat_behavioralsignals.signals import Reading, reading_of
@@ -30,11 +30,11 @@ MAX_CHUNKS = 1000
 Chunk = tuple[float, int, bytes]
 
 
-def _audio(first: Chunk, chunks: queue.Queue) -> Iterator[bytes]:
-    """The audio of one stream, until None."""
+def _audio(first: Chunk, chunks: queue.Queue) -> Iterator[bytes | EndOfTurn]:
+    """The audio and end-of-turn markers of one stream, until None."""
     chunk = first
     while chunk is not None:
-        yield chunk[2]
+        yield chunk if chunk is END_OF_TURN else chunk[2]
         chunk = chunks.get()
 
 
@@ -63,7 +63,7 @@ class BehavioralSignalsStream:
         """
         self._client = client
         self._on_failing = on_failing
-        self._chunks: queue.Queue = queue.Queue(MAX_CHUNKS)
+        self._chunks: queue.Queue = queue.Queue(MAX_CHUNKS)  # Chunk, END_OF_TURN, or None to end
         self._readings: queue.Queue = queue.Queue()
         self._closed = threading.Event()
         threading.Thread(target=self._run, daemon=True).start()
@@ -85,6 +85,15 @@ class BehavioralSignalsStream:
                 "Behavioral Signals stream is not reading audio: dropping it and restarting"
             )
             _end(self._chunks)
+
+    def end_turn(self) -> None:
+        """Tell the stream that the user's turn ended, after the audio sent so far."""
+        if self._closed.is_set():
+            return
+        try:
+            self._chunks.put_nowait(END_OF_TURN)
+        except queue.Full:
+            pass  # the next send restarts the stalled stream
 
     def drain(self) -> list[Reading]:
         """Take the readings that arrived since the last call.
@@ -132,7 +141,10 @@ class BehavioralSignalsStream:
             True if the stream sent any results.
         """
         chunks = self._chunks = queue.Queue(MAX_CHUNKS)
-        if self._closed.is_set() or (first := chunks.get()) is None:
+        first = None if self._closed.is_set() else chunks.get()
+        while first is END_OF_TURN:  # a turn with no audio in this stream
+            first = chunks.get()
+        if first is None:
             return False
         options = StreamingOptions(sample_rate=first[1], encoding="LINEAR_PCM")
         responses = self._client.stream_audio(_audio(first, chunks), options)
