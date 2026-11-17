@@ -128,6 +128,8 @@ about 1 to 2.5 seconds after its audio. On each final transcription, the service
 reading of each signal that overlaps the transcription's audio: the audio since the previous
 final transcription. So a reading usually covers the start or middle of a turn rather than its
 last words, and a very short turn may have no reading. Then the message has no reading at the start.
+On each final transcription the service also tells the API that the turn ended, so the reading of
+the turn's last words comes sooner, though still after the transcription has passed.
 
 ## Your users' audio
 
@@ -153,7 +155,7 @@ Open http://localhost:7860/client and talk. The bot logs each turn's reading, as
 
 ## Compatibility
 
-Tested with Pipecat v1.16.0 and behavioralsignals 1.0.0. RCS is an alpha in Pipecat, so its types
+Tested with Pipecat v1.16.0 and behavioralsignals 1.2.0. RCS is an alpha in Pipecat, so its types
 may change between releases.
 
 ## Development

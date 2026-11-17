@@ -1,6 +1,6 @@
 [project]
 name = "pipecat-behavioralsignals"
-version = "0.2.1"
+version = "0.3.0"
 description = "Behavioral Signals voice readings for Pipecat agents, as RCS perception"
 readme = "README.md"
 authors = [{ name = "Behavioral Signal Technologies" }]
