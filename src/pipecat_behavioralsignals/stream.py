@@ -48,7 +48,7 @@ def _end(chunks: queue.Queue) -> None:
 
 
 class BehavioralSignalsStream:
-    """Audio in with `send`, readings out with `drain`.
+    """Audio in with `send`, the end of a turn with `end_turn`, readings out with `drain`.
 
     The stream opens on the first audio. When it fails, a new one opens after a pause, from the
     audio sent after it failed. When streams keep failing, it calls `on_failing` once.
