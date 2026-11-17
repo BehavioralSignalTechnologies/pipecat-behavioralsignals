@@ -432,3 +432,43 @@ async def test_an_eager_transcription_sends_no_marker(monkeypatch):
     await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
 
     assert items == [ONE_SECOND]
+
+
+def answers_on_marker(results: list[ResultItem]):
+    """A client whose stream answers with `results` when it reads an end-of-turn marker."""
+
+    def stream_audio(audio, options):
+        for item in audio:
+            if item is END_OF_TURN:
+                yield StreamingResultResponse(result=results)
+
+    return SimpleNamespace(stream_audio=stream_audio, close=lambda: None)
+
+
+async def test_the_reading_of_a_turn_end_does_not_go_to_the_next_turn(monkeypatch):
+    # Read up to the marker at 2 s, and given to 0.01 s, so it ends just past it.
+    up_to_the_turn_end = ResultItem(
+        task="emotion",
+        startTime="0.2",
+        endTime="2.01",
+        level="segment",
+        prediction=[ModelPredictions(label="angry", posterior="0.7")],
+    )
+    use_client(monkeypatch, answers_on_marker([up_to_the_turn_end]))
+    frames = [audio(), WAIT, transcription("first"), WAIT, audio(), WAIT]
+    frames += [UserStoppedSpeakingFrame(), WAIT, audio(), WAIT, transcription("second")]
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    first, second = of_type(down, TranscriptionFrame)
+    assert first.perception is None  # the reading arrives after it
+    assert second.perception is None  # its audio is 2-3 s
+
+
+async def test_a_final_transcription_after_its_turn_end_reads_the_turn(monkeypatch):
+    use_client(monkeypatch, fake_client([ANGRY]))
+    frames = [audio(), WAIT, UserStoppedSpeakingFrame(), WAIT, transcription("first")]
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert of_type(down, TranscriptionFrame)[0].perception  # its audio is 0-1 s
