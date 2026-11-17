@@ -17,6 +17,7 @@ from pipecat.frames.frames import (
     TranscriptionFrame,
     EagerTranscriptionFrame,
     PerceptionMetadataFrame,
+    UserStoppedSpeakingFrame,
 )
 from pipecat.services.settings import ServiceSettings
 from pipecat.services.ai_service import AIService
@@ -42,11 +43,14 @@ class BehavioralSignalsPerceptionService(AIService):
     no audio came in between. It also adds it on an eager transcription,
     without ending the span. Signals with no such reading are left out, and
     with none at all ``perception`` stays as it was. Transcriptions with no
-    text pass through unread. On each final transcription with text, and
-    never on an eager one, it also tells the API that the turn ended, so the
-    API reads the turn's last words at once. A reading a producer before it
-    set, such as ``PipecatToneReader``, is kept, merged with
-    ``merge_perception``.
+    text pass through unread. A reading a producer before it set, such as
+    ``PipecatToneReader``, is kept, merged with ``merge_perception``.
+
+    On each ``UserStoppedSpeakingFrame``, which the user aggregator sends back
+    through it when it decides that the user's turn is over, it tells the API
+    that the turn ended, so the API reads the turn's last words at once. With
+    no such frame, as when the stop strategy turns the user speaking frames
+    off, the API waits for silence instead.
 
     It reads mono audio only. On audio with more channels it reports an error
     and stops reading. When the stream keeps failing, it reports an error
@@ -119,7 +123,7 @@ class BehavioralSignalsPerceptionService(AIService):
         return PerceptionMetadataFrame(service_name=self.name, perception=self._capabilities())
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
-        """Stream the user's audio, and set the perception of transcriptions.
+        """Stream the user's audio and its turn ends, and set the perception of transcriptions.
 
         Args:
             frame: The frame to process.
@@ -132,10 +136,11 @@ class BehavioralSignalsPerceptionService(AIService):
         elif isinstance(frame, EagerTranscriptionFrame) and frame.text.strip():
             self._add_reading(frame, self._perceive(self._span_start, self._seconds))
         elif isinstance(frame, TranscriptionFrame) and frame.text.strip():
-            if self._stream:
-                self._stream.end_turn()
             self._end_span()
             self._add_reading(frame, self._perceive(*self._span))
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            if self._stream:
+                self._stream.end_turn()
         elif (
             isinstance(frame, PerceptionMetadataFrame)
             and direction == FrameDirection.DOWNSTREAM

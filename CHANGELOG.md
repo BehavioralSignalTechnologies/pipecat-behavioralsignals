@@ -2,8 +2,9 @@
 
 ## 0.3.0 (2026-11-17)
 
-- On each final transcription with text, tells the API that the user's turn ended, so the API
-  reads the turn's last words at once instead of waiting for silence. Eager transcriptions don't.
+- When the user aggregator ends the user's turn (a `UserStoppedSpeakingFrame`), tells the API that
+  the turn ended, so the API reads the turn's last words at once instead of waiting for silence.
+  Final and eager transcriptions don't end the turn.
 - Requires behavioralsignals 1.2.0 (`>=1.2.0,<2`), the first SDK that sends the end of a turn.
 
 ## 0.2.1 (2026-11-17)

@@ -128,8 +128,17 @@ about 1 to 2.5 seconds after its audio. On each final transcription, the service
 reading of each signal that overlaps the transcription's audio: the audio since the previous
 final transcription. So a reading usually covers the start or middle of a turn rather than its
 last words, and a very short turn may have no reading. Then the message has no reading at the start.
-On each final transcription the service also tells the API that the turn ended, so the reading of
-the turn's last words comes sooner, though still after the transcription has passed.
+
+When the user aggregator decides that the user's turn is over, it sends a `UserStoppedSpeakingFrame`
+back through the service, and the service tells the API that the turn ended. The API then reads the
+turn's last words at once instead of waiting for silence, so their reading comes sooner, though
+still after the transcription has passed. A final transcription does not end the turn, because STT
+services such as Deepgram send one at each short pause.
+
+A setup in which no `UserStoppedSpeakingFrame` passes through the service never tells the API that
+a turn ended, and the API waits for silence to close each turn. That happens when the stop strategy
+ends the turn with the user speaking frames turned off (`enable_user_speaking_frames=False`) and no
+other processor announces the end of the turn.
 
 ## Your users' audio
 

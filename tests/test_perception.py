@@ -10,10 +10,12 @@ from pipecat.frames.frames import (
     TranscriptionFrame,
     EagerTranscriptionFrame,
     PerceptionMetadataFrame,
+    UserStoppedSpeakingFrame,
 )
 from behavioralsignals.models import ResultItem, ModelPredictions, StreamingResultResponse
+from pipecat.pipeline.pipeline import Pipeline
 from pipecat.expressive.perception import PerceptionTerm, PerceptionSignal, PerceptionCapabilities
-from pipecat.processors.frame_processor import FrameDirection
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 from pipecat_behavioralsignals import stream, perception
 from pipecat_behavioralsignals.signals import CAPABILITIES
@@ -377,14 +379,47 @@ def recording_client(items: list):
     return SimpleNamespace(stream_audio=stream_audio, close=lambda: None)
 
 
-async def test_a_final_transcription_sends_one_marker_after_its_audio(monkeypatch):
+class TurnEnd(FrameProcessor):
+    """Ends the user's turn after each final transcription, as the user aggregator does."""
+
+    async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
+        await self.push_frame(frame, direction)
+        if isinstance(frame, TranscriptionFrame):
+            await self.broadcast_frame(UserStoppedSpeakingFrame)
+
+
+async def test_the_turn_end_from_the_user_aggregator_sends_one_marker_and_passes_on(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    service = BehavioralSignalsPerceptionService()
+    frames = [audio(), WAIT, transcription("first"), WAIT]
+
+    _, up = await run_test(Pipeline([service, TurnEnd()]), frames_to_send=frames)
+
+    assert items == [ONE_SECOND, END_OF_TURN]
+    assert len(of_type(up, UserStoppedSpeakingFrame)) == 1
+
+
+async def test_a_turn_with_two_final_transcriptions_sends_one_marker_at_its_end(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    frames = [audio(), WAIT, transcription("first"), WAIT, audio(), WAIT, transcription("second")]
+    frames += [WAIT, UserStoppedSpeakingFrame(), WAIT]
+
+    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert items == [ONE_SECOND, ONE_SECOND, END_OF_TURN]
+
+
+async def test_a_final_transcription_sends_no_marker(monkeypatch):
     items = []
     use_client(monkeypatch, recording_client(items))
     frames = [audio(), WAIT, transcription("first"), WAIT]
 
     await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
 
-    assert items == [ONE_SECOND, END_OF_TURN]
+    assert items == [ONE_SECOND]
 
 
 async def test_an_eager_transcription_sends_no_marker(monkeypatch):
@@ -392,16 +427,6 @@ async def test_an_eager_transcription_sends_no_marker(monkeypatch):
     use_client(monkeypatch, recording_client(items))
     eager = EagerTranscriptionFrame(text="first", user_id="user", timestamp="")
     frames = [audio(), WAIT, eager, WAIT]
-
-    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
-
-    assert items == [ONE_SECOND]
-
-
-async def test_an_empty_transcription_sends_no_marker(monkeypatch):
-    items = []
-    use_client(monkeypatch, recording_client(items))
-    frames = [audio(), WAIT, transcription(" "), WAIT]
 
     await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
 
