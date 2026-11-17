@@ -1,6 +1,6 @@
 [project]
 name = "pipecat-behavioralsignals"
-version = "0.2.0"
+version = "0.2.1"
 description = "Behavioral Signals voice readings for Pipecat agents, as RCS perception"
 readme = "README.md"
 authors = [{ name = "Behavioral Signal Technologies" }]
@@ -26,7 +26,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://behavioralsignals.com/"
-Documentation = "https://behavioralsignals.readme.io/"
+Documentation = "https://docs.behavioralsignals.com/"
 Repository = "https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals"
 Issues = "https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/issues"
 Changelog = "https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/CHANGELOG.md"

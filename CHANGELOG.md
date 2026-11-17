@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 (2026-11-17)
+
+- The Documentation link (PyPI, README badge, GitHub issue page) now points to
+  docs.behavioralsignals.com instead of behavioralsignals.readme.io.
+
 ## 0.2.0 (2026-11-12)
 
 - Requires Pipecat 1.16 (`>=1.16.0,<1.17`). On Pipecat 1.15, use 0.1.0.

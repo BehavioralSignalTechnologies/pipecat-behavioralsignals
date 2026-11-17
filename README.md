@@ -7,7 +7,7 @@
 <div align="center">
 
 [![Discord](https://badgen.net/discord/members/fxjRrbMH3Q/?color=8978cc&icon=discord)](https://discord.com/invite/fxjRrbMH3Q)
-[![readme.io](https://badgen.net/badge/readme.io/Documentation/?color=black)](https://behavioralsignals.readme.io/)
+[![readme.io](https://badgen.net/badge/readme.io/Documentation/?color=black)](https://docs.behavioralsignals.com/)
 [![CI](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/actions/workflows/ci.yml/badge.svg)](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/actions/workflows/ci.yml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
