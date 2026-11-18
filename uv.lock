@@ -346,7 +346,7 @@ wheels = [
 
 [[package]]
 name = "behavioralsignals"
-version = "1.0.0"
+version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "audioop-lts", marker = "python_full_version >= '3.13'" },
@@ -356,9 +356,9 @@ dependencies = [
     { name = "pydub" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b7/1a/9178e7d05296663f9134bf688c94600e75e2dda0ed274217fbe367a74dc8/behavioralsignals-1.0.0.tar.gz", hash = "sha256:46ae3d31403e0719f52c813cbf1519bed26c4795d201b61ac4dc058fe2b27dad", size = 55524, upload-time = "2026-11-10T16:31:16.22Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/74/db7e4536949da987774095cd5a03b7ee5e70a0e8ba3ac067999c677c2566/behavioralsignals-1.2.1.tar.gz", hash = "sha256:5f632622006c02085ba0ff5a3014eb5e551539c06ff477c739c0aa5baf2f4776", size = 61023, upload-time = "2026-11-18T11:21:35.215Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/61/613a6d950f8da7801e2e68e7f5bded858471259c252355c42dbba144831f/behavioralsignals-1.0.0-py3-none-any.whl", hash = "sha256:eb8503ce2fbb113070b9da2ca38c6d652d4f66cec939c783e62732596abc6e67", size = 40852, upload-time = "2026-11-10T16:31:14.932Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/ef/82403e4c380a8bb62750855c5d8e5bb93a0626e1d5eb33ca55d209b19329/behavioralsignals-1.2.1-py3-none-any.whl", hash = "sha256:b8d9dd57344349feb00591479e1bb7cd45825e1ffa7d02a13414bdd9da70cadc", size = 43125, upload-time = "2026-11-18T11:21:33.734Z" },
 ]
 
 [[package]]
@@ -2172,7 +2172,7 @@ wheels = [
 
 [[package]]
 name = "pipecat-behavioralsignals"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "behavioralsignals" },
@@ -2190,7 +2190,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "behavioralsignals", specifier = ">=1.0.0,<2" },
+    { name = "behavioralsignals", specifier = ">=1.2.0,<2" },
     { name = "pipecat-ai", specifier = ">=1.16.0,<1.17" },
 ]
 
