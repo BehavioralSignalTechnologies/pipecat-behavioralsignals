@@ -164,7 +164,7 @@ Open http://localhost:7860/client and talk. The bot logs each turn's reading, as
 
 ## Compatibility
 
-Tested with Pipecat v1.16.0 and behavioralsignals 1.2.0. RCS is an alpha in Pipecat, so its types
+Tested with Pipecat v1.16.0 and behavioralsignals 1.2.1. RCS is an alpha in Pipecat, so its types
 may change between releases.
 
 ## Development
