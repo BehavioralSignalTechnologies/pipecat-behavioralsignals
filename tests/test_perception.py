@@ -2,6 +2,7 @@ import threading
 from types import SimpleNamespace
 
 import pytest
+from behavioralsignals import END_OF_TURN
 from pipecat.tests.utils import SleepFrame, run_test
 from pipecat.frames.frames import (
     ErrorFrame,
@@ -9,10 +10,12 @@ from pipecat.frames.frames import (
     TranscriptionFrame,
     EagerTranscriptionFrame,
     PerceptionMetadataFrame,
+    UserStoppedSpeakingFrame,
 )
 from behavioralsignals.models import ResultItem, ModelPredictions, StreamingResultResponse
+from pipecat.pipeline.pipeline import Pipeline
 from pipecat.expressive.perception import PerceptionTerm, PerceptionSignal, PerceptionCapabilities
-from pipecat.processors.frame_processor import FrameDirection
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 from pipecat_behavioralsignals import stream, perception
 from pipecat_behavioralsignals.signals import CAPABILITIES
@@ -295,12 +298,13 @@ async def test_a_failed_login_is_reported_and_frames_pass_unread(monkeypatch):
         raise ValueError("Missing cid")
 
     monkeypatch.setattr(perception, "Behavioral", failing_client)
-    frames = [audio(), transcription("first")]
+    frames = [audio(), transcription("first"), UserStoppedSpeakingFrame()]
 
     down, up = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
 
     assert not of_type(down, PerceptionMetadataFrame)
     assert of_type(down, TranscriptionFrame)[0].perception is None
+    assert of_type(down, UserStoppedSpeakingFrame)
     assert "Missing cid" in of_type(up, ErrorFrame)[0].error
 
 
@@ -364,3 +368,101 @@ async def test_the_stream_and_the_client_are_closed_at_the_end(monkeypatch):
     stream_ended.wait(2)  # the stream ends in its own thread
 
     assert sorted(closed) == ["client", "stream"]
+
+
+def recording_client(items: list):
+    """A client whose stream records every item of its audio, and answers nothing."""
+
+    def stream_audio(audio, options):
+        items.extend(audio)
+        yield from ()
+
+    return SimpleNamespace(stream_audio=stream_audio, close=lambda: None)
+
+
+class TurnEnd(FrameProcessor):
+    """Ends the user's turn after each final transcription, as the user aggregator does."""
+
+    async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
+        await self.push_frame(frame, direction)
+        if isinstance(frame, TranscriptionFrame):
+            await self.broadcast_frame(UserStoppedSpeakingFrame)
+
+
+async def test_the_turn_end_from_the_user_aggregator_sends_one_marker_and_passes_on(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    service = BehavioralSignalsPerceptionService()
+    frames = [audio(), WAIT, transcription("first"), WAIT]
+
+    _, up = await run_test(Pipeline([service, TurnEnd()]), frames_to_send=frames)
+
+    assert items == [ONE_SECOND, END_OF_TURN]
+    assert len(of_type(up, UserStoppedSpeakingFrame)) == 1
+
+
+async def test_a_turn_with_two_final_transcriptions_sends_one_marker_at_its_end(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    frames = [audio(), WAIT, transcription("first"), WAIT, audio(), WAIT, transcription("second")]
+    frames += [WAIT, UserStoppedSpeakingFrame(), WAIT]
+
+    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert items == [ONE_SECOND, ONE_SECOND, END_OF_TURN]
+
+
+async def test_a_final_transcription_sends_no_marker(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    frames = [audio(), WAIT, transcription("first"), WAIT]
+
+    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert items == [ONE_SECOND]
+
+
+async def test_an_eager_transcription_sends_no_marker(monkeypatch):
+    items = []
+    use_client(monkeypatch, recording_client(items))
+    eager = EagerTranscriptionFrame(text="first", user_id="user", timestamp="")
+    frames = [audio(), WAIT, eager, WAIT]
+
+    await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    assert items == [ONE_SECOND]
+
+
+def answers_on_marker(results: list[ResultItem]):
+    """A client whose stream answers with `results` when it reads an end-of-turn marker."""
+
+    def stream_audio(audio, options):
+        for item in audio:
+            if item is END_OF_TURN:
+                yield StreamingResultResponse(result=results)
+
+    return SimpleNamespace(stream_audio=stream_audio, close=lambda: None)
+
+
+@pytest.mark.xfail(
+    strict=True, reason="known issue: the reading of a turn's end can attach to a short next turn"
+)
+async def test_the_reading_of_a_turn_end_does_not_go_to_the_next_turn(monkeypatch):
+    # Read up to the marker at 2 s, and given to 0.01 s, so it ends just past it.
+    up_to_the_turn_end = ResultItem(
+        task="emotion",
+        startTime="0.2",
+        endTime="2.01",
+        level="segment",
+        prediction=[ModelPredictions(label="angry", posterior="0.7")],
+    )
+    use_client(monkeypatch, answers_on_marker([up_to_the_turn_end]))
+    frames = [audio(), WAIT, transcription("first"), WAIT, audio(), WAIT]
+    frames += [UserStoppedSpeakingFrame(), WAIT, audio(), WAIT, transcription("second")]
+
+    down, _ = await run_test(BehavioralSignalsPerceptionService(), frames_to_send=frames)
+
+    first, second = of_type(down, TranscriptionFrame)
+    assert first.perception is None  # the reading arrives after it
+    assert second.perception is None  # its audio is 2-3 s

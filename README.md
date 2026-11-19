@@ -129,6 +129,17 @@ reading of each signal that overlaps the transcription's audio: the audio since 
 final transcription. So a reading usually covers the start or middle of a turn rather than its
 last words, and a very short turn may have no reading. Then the message has no reading at the start.
 
+When the user aggregator decides that the user's turn is over, it sends a `UserStoppedSpeakingFrame`
+back through the service, and the service tells the API that the turn ended. The API then reads the
+turn's last words at once instead of waiting for silence, so their reading comes sooner, though
+still after the transcription has passed. A final transcription does not end the turn, because STT
+services such as Deepgram send one at each short pause.
+
+A setup in which no `UserStoppedSpeakingFrame` passes through the service never tells the API that
+a turn ended, and the API waits for silence to close each turn. That happens when the stop strategy
+ends the turn with the user speaking frames turned off (`enable_user_speaking_frames=False`) and no
+other processor announces the end of the turn.
+
 ## Your users' audio
 
 The service sends the user's audio to the Behavioral Signals API. The
@@ -153,7 +164,7 @@ Open http://localhost:7860/client and talk. The bot logs each turn's reading, as
 
 ## Compatibility
 
-Tested with Pipecat v1.16.0 and behavioralsignals 1.0.0. RCS is an alpha in Pipecat, so its types
+Tested with Pipecat v1.16.0 and behavioralsignals 1.2.1. RCS is an alpha in Pipecat, so its types
 may change between releases.
 
 ## Development

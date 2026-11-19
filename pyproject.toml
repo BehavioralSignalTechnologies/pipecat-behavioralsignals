@@ -1,6 +1,6 @@
 [project]
 name = "pipecat-behavioralsignals"
-version = "0.2.1"
+version = "0.3.0"
 description = "Behavioral Signals voice readings for Pipecat agents, as RCS perception"
 readme = "README.md"
 authors = [{ name = "Behavioral Signal Technologies" }]
@@ -20,7 +20,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-    "behavioralsignals>=1.0.0,<2",
+    "behavioralsignals>=1.2.0,<2",
     "pipecat-ai>=1.16.0,<1.17",
 ]
 
