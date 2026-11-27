@@ -1,11 +1,12 @@
 # Changelog
 
-## 0.3.0 (2026-11-17)
+## 0.3.0 (2026-11-30)
 
 - When the user aggregator ends the user's turn (a `UserStoppedSpeakingFrame`), tells the API that
   the turn ended, so the API reads the turn's last words at once instead of waiting for silence.
   Final and eager transcriptions don't end the turn.
 - Requires behavioralsignals 1.2.0 (`>=1.2.0,<2`), the first SDK that sends the end of a turn.
+- Requires Pipecat 1.17 (`>=1.17.0,<1.18`). On Pipecat 1.16, use 0.2.1.
 
 ## 0.2.1 (2026-11-17)
 

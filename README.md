@@ -13,7 +13,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![PyPI](https://badgen.net/pypi/v/pipecat-behavioralsignals)](https://pypi.org/project/pipecat-behavioralsignals/)
 [![Python](https://badgen.net/pypi/python/pipecat-behavioralsignals)](https://pypi.org/project/pipecat-behavioralsignals/)
-[![Pipecat](https://badgen.net/badge/Pipecat/1.16/blue)](https://github.com/pipecat-ai/pipecat)
+[![Pipecat](https://badgen.net/badge/Pipecat/1.17/blue)](https://github.com/pipecat-ai/pipecat)
 [![License](https://badgen.net/badge/license/BSD-2-Clause/blue)](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/LICENSE)
 [![Contributor Covenant](https://badgen.net/badge/Contributor%20Covenant/2.1/4baaaa)](https://github.com/BehavioralSignalTechnologies/pipecat-behavioralsignals/blob/main/CODE_OF_CONDUCT.md)
 
@@ -42,7 +42,7 @@ Or with pip:
 pip install pipecat-behavioralsignals
 ```
 
-Requires Python 3.12 or later and Pipecat 1.16.
+Requires Python 3.12 or later and Pipecat 1.17.
 
 ## Prerequisites
 
@@ -164,7 +164,7 @@ Open http://localhost:7860/client and talk. The bot logs each turn's reading, as
 
 ## Compatibility
 
-Tested with Pipecat v1.16.0 and behavioralsignals 1.2.1. RCS is an alpha in Pipecat, so its types
+Tested with Pipecat v1.17.0 and behavioralsignals 1.2.1. RCS is an alpha in Pipecat, so its types
 may change between releases.
 
 ## Development
